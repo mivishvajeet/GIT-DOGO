@@ -3,6 +3,7 @@
 import http.server
 import json
 import urllib.parse
+import socket
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -29,9 +30,15 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
 
         if path.startswith("/api/"):
             self._handle_api_get(path, urllib.parse.parse_qs(parsed.query))
-        else:
-            # Fallback to index.html for SPA routes or static files
-            super().do_GET()
+            return
+
+        # Serve static assets or index.html
+        if path == "/" or path == "":
+            self.path = "/index.html"
+        elif not (STATIC_DIR / path.lstrip("/")).exists():
+            self.path = "/index.html"
+
+        super().do_GET()
 
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
@@ -273,16 +280,41 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json({"error": "Not Found"}, status=404)
 
 
-def start_server(port: int = 8080) -> None:
-    """Starts the Nexus Ops Cockpit HTTP server."""
-    server_address = ("127.0.0.1", port)
-    httpd = http.server.ThreadingHTTPServer(server_address, CockpitApiHandler)
+def find_available_port(start_port: int = 8080) -> int:
+    """Finds the first available port starting from start_port."""
+    candidates = [start_port, 8081, 8888, 9000, 7777, 8082, 8083]
+    for p in candidates:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", p))
+                return p
+            except OSError:
+                continue
+    # Fallback to ephemeral port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+def start_server(port: Optional[int] = None) -> None:
+    """Starts the Nexus Ops Cockpit HTTP server with auto-port detection."""
+    target_port = port if port else find_available_port(8080)
+    server_address = ("0.0.0.0", target_port)
+    
+    try:
+        httpd = http.server.ThreadingHTTPServer(server_address, CockpitApiHandler)
+    except OSError:
+        target_port = find_available_port(target_port + 1)
+        server_address = ("0.0.0.0", target_port)
+        httpd = http.server.ThreadingHTTPServer(server_address, CockpitApiHandler)
+
     print(f"\n\033[92m=======================================================================\033[0m")
     print(f"\033[1m\033[96m       NEXUS COCKPIT — ENTERPRISE REPOSITORY DASHBOARD ACTIVE\033[0m")
     print(f"\033[92m=======================================================================\033[0m")
-    print(f"\n  URL: \033[1m\033[93mhttp://localhost:{port}\033[0m")
-    print(f"  Playground: {config.playground_repo}")
-    print(f"\n  Open http://localhost:{port} in your browser to start playing.")
+    print(f"\n  URL (Localhost) : \033[1m\033[93mhttp://localhost:{target_port}\033[0m")
+    print(f"  URL (IPv4 Loop) : \033[1m\033[93mhttp://127.0.0.1:{target_port}\033[0m")
+    print(f"  Playground Repo : {config.playground_repo}")
+    print(f"\n  Open either URL above in Chrome, Safari, or Arc to start.")
     print(f"  Press Ctrl+C to stop the dashboard server.\n")
     try:
         httpd.serve_forever()
