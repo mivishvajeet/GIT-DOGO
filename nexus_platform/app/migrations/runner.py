@@ -60,3 +60,4 @@ def run_migrations(db_path: Path = DB_FILE) -> List[str]:
                     raise MigrationError(f"Migration {version} failed: {e}") from e
 
     return applied
+

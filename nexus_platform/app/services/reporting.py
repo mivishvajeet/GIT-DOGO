@@ -31,3 +31,4 @@ def get_sales_summary(db: DatabaseSession) -> Dict[str, Any]:
     """)
     row = cur.fetchone()
     return dict(row) if row else {}
+

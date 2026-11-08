@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus Ops Cockpit — Repository Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="top-nav">
+    <div class="brand">
+      <svg height="24" viewBox="0 0 16 16" width="24" fill="currentColor">
+        <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path>
+      </svg>
+      <span>NEXUS COCKPIT</span>
+      <span class="badge">SIMULATOR ACTIVE</span>
+    </div>
+    <div class="nav-stats">
+      <div class="stat-pill">
+        <span>Active Scenario:</span>
+        <span id="nav-active-scenario" class="stat-val" style="color: var(--accent-yellow)">None</span>
+      </div>
+      <div class="stat-pill">
+        <span>Health Score:</span>
+        <span id="nav-health-score" class="stat-val" style="color: var(--accent-green)">--</span>
+      </div>
+      <div class="stat-pill">
+        <span>Progress:</span>
+        <span id="nav-progress-val" class="stat-val">0/30 (0%)</span>
+      </div>
+      <button class="btn btn-danger" onclick="openEscalationModal()">🚨 Escalate Sev-1</button>
+    </div>
+  </header>
+
+  <!-- Secondary Tab Navigation -->
+  <nav class="tabs-bar">
+    <button class="tab-btn active" data-tab="flight-deck">
+      <span>🚀 Flight Deck (30 Scenarios)</span>
+    </button>
+    <button class="tab-btn" data-tab="pull-requests">
+      <span>🔀 Pull Requests</span>
+      <span id="badge-pr-count" class="tab-badge">4</span>
+    </button>
+    <button class="tab-btn" data-tab="code-commits">
+      <span>💻 Code & Branches</span>
+    </button>
+    <button class="tab-btn" data-tab="cicd-actions">
+      <span>⚙️ Actions (CI/CD)</span>
+    </button>
+    <button class="tab-btn" data-tab="incident-warroom">
+      <span>🛡️ Emergency War Room</span>
+    </button>
+    <button class="tab-btn" data-tab="forensics-radar">
+      <span>📡 Forensic Radar</span>
+    </button>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="container">
+
+    <!-- VIEW 1: FLIGHT DECK (SCENARIO CONTROLLER) -->
+    <section id="flight-deck" class="view-panel active">
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <span>Active Mission Command</span>
+          <div>
+            <button class="btn btn-primary" onclick="verifyActiveScenario()">Verify Active Scenario</button>
+            <button class="btn" onclick="resetActiveScenario()">Reset Scenario</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="active-scenario-detail" style="font-size: 14px;">
+            <p>Select any scenario below to spin up the failure state in your local playground repository.</p>
+          </div>
+          <div id="verification-banner" style="display:none; margin-top: 16px;"></div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 16px; font-weight: 600;">All 30 Challenges</h3>
+      <div class="scenarios-grid" id="scenarios-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: PULL REQUESTS SIMULATOR -->
+    <section id="pull-requests" class="view-panel">
+      <!-- PR List View -->
+      <div id="pr-list-view">
+        <div class="card">
+          <div class="card-header">
+            <span>Pull Requests (Nexus Inventory Platform)</span>
+            <div style="font-size: 12px; color: var(--text-secondary);">100 Fictional Engineers • 15 Teams</div>
+          </div>
+          <div id="pr-items-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- PR Detail & Review View -->
+      <div id="pr-detail-view" style="display:none;">
+        <button class="btn" style="margin-bottom: 16px;" onclick="backToPrList()">← Back to Pull Requests</button>
+        <div id="pr-detail-content">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: CODE & COMMITS -->
+    <section id="code-commits" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <span>Branch: </span>
+            <strong id="code-current-branch" style="color:var(--accent-blue)">main</strong>
+          </div>
+          <div>
+            <button class="btn" onclick="simulateSync('pull')">git pull origin</button>
+            <button class="btn" onclick="simulateSync('push')">git push origin</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <h4 style="margin-bottom: 12px;">Recent Commit History</h4>
+          <div id="commits-list">
+            <!-- Commits list rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: CI/CD ACTIONS -->
+    <section id="cicd-actions" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <span>GitHub Actions Workflows (.github/workflows/ci.yml)</span>
+          <span class="badge" style="background:#23863626; color:#3fb950;">PIPELINE ACTIVE</span>
+        </div>
+        <div class="card-body">
+          <div style="display:flex; gap:16px; margin-bottom: 24px; flex-wrap: wrap;">
+            <div class="card" style="flex:1; min-width: 180px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-secondary)">STAGE 1</div>
+              <strong>Lint & Typecheck</strong>
+              <div style="color:var(--accent-green); margin-top:4px;">✔ PASSED</div>
+            </div>
+            <div class="card" style="flex:1; min-width: 180px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-secondary)">STAGE 2</div>
+              <strong>Unit & Integration Tests</strong>
+              <div id="ci-test-status" style="color:var(--accent-green); margin-top:4px;">✔ PASSED</div>
+            </div>
+            <div class="card" style="flex:1; min-width: 180px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-secondary)">STAGE 3</div>
+              <strong>Security & Secret Scan</strong>
+              <div id="ci-sec-status" style="color:var(--accent-green); margin-top:4px;">✔ CLEAN</div>
+            </div>
+            <div class="card" style="flex:1; min-width: 180px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-secondary)">STAGE 4</div>
+              <strong>Docker Build</strong>
+              <div style="color:var(--accent-green); margin-top:4px;">✔ BUILT</div>
+            </div>
+            <div class="card" style="flex:1; min-width: 180px; padding: 12px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-secondary)">STAGE 5</div>
+              <strong>Staging Deployment</strong>
+              <div style="color:var(--accent-blue); margin-top:4px;">● DEPLOYED</div>
+            </div>
+          </div>
+          <pre id="ci-logs-output">Run: python3 -m unittest discover -s nexus_platform/tests
+Ran 4 tests in 0.017s
+OK</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: EMERGENCY WAR ROOM & ESCALATION -->
+    <section id="incident-warroom" class="view-panel">
+      <div class="escalation-header">
+        <div>
+          <h2>🚨 EMERGENCY INCIDENT WAR ROOM</h2>
+          <p>For when repository disasters exceed local bounds and require executive coordination.</p>
+        </div>
+        <button class="btn btn-danger" onclick="openEscalationModal()">Broadcast New Escalation</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span>Active Incident Escalations & On-Call Dispatch</span>
+        </div>
+        <div class="card-body" id="escalation-log-container">
+          <p style="color: var(--text-secondary)">No active critical incidents declared. All systems nominal.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: FORENSIC RADAR -->
+    <section id="forensics-radar" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <span>Repository Health & Forensic Diagnostics</span>
+          <button class="btn" onclick="fetchForensics()">Refresh Radar</button>
+        </div>
+        <div class="card-body">
+          <div style="display: flex; gap: 24px; margin-bottom: 24px;">
+            <div style="font-size: 32px; font-weight: bold;" id="radar-score">100 / 100</div>
+            <div>
+              <div id="radar-status" style="font-weight: 600; color: var(--accent-green);">EXCELLENT</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">Continuous non-destructive audit of .git objects, refs, and working tree.</div>
+            </div>
+          </div>
+          <div id="radar-anomalies">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ESCALATION MODAL -->
+  <div id="escalation-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100; justify-content:center; align-items:center;">
+    <div class="card" style="width: 580px; max-width: 90%;">
+      <div class="card-header" style="background:#da3633; color:white;">
+        <span>Declare Incident & Dispatch Escalation</span>
+        <button onclick="closeEscalationModal()" style="background:none; border:none; color:white; font-size:16px; cursor:pointer;">✕</button>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; margin-bottom:4px; font-weight:600;">Incident Severity</label>
+          <select id="esc-sev" style="width:100%; padding:8px; background:var(--bg-tertiary); color:white; border:1px solid var(--border-color); border-radius:4px;">
+            <option value="SEV-1">SEV-1 (Critical Outage / Catastrophic Mainline Failure)</option>
+            <option value="SEV-2">SEV-2 (High Degradation / Corrupted Release Tag)</option>
+            <option value="SEV-3">SEV-3 (Moderate Conflict / CI Blocker)</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; margin-bottom:4px; font-weight:600;">Incident Title</label>
+          <input type="text" id="esc-title" value="Catastrophic Mainline Merge Failure" style="width:100%; padding:8px; background:var(--bg-tertiary); color:white; border:1px solid var(--border-color); border-radius:4px;">
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display:block; margin-bottom:4px; font-weight:600;">Customer Impact / Blast Radius</label>
+          <input type="text" id="esc-impact" value="Order processing failing across 100% of customers" style="width:100%; padding:8px; background:var(--bg-tertiary); color:white; border:1px solid var(--border-color); border-radius:4px;">
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display:block; margin-bottom:4px; font-weight:600;">Operational Notes & Action Taken</label>
+          <textarea id="esc-notes" rows="3" style="width:100%; padding:8px; background:var(--bg-tertiary); color:white; border:1px solid var(--border-color); border-radius:4px;">Reverting merge commit on main. Security team rotating exposed keys.</textarea>
+        </div>
+        <div style="text-align: right;">
+          <button class="btn" onclick="closeEscalationModal()">Cancel</button>
+          <button class="btn btn-danger" onclick="submitEscalation()">Broadcast Escalation Alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

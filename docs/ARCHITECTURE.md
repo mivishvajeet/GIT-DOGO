@@ -62,3 +62,4 @@ To adhere to enterprise safety standards:
 2. **Zero External Network Requirements**: All 30 levels and tests execute completely offline without relying on remote GitHub repositories, third-party API keys, or active network connections.
 3. **No Real Secrets**: All security incidents use synthetic dummy keys (e.g., `AKIA_NEXUS_LEAKED_KEY_9921_SECRET`).
 4. **Deterministic Reproducibility**: Random seed (`DETERMINISTIC_SEED = 1337`) ensures identical developer names, commit logs, and failure states across all runs.
+

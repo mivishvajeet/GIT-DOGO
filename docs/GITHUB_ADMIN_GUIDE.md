@@ -169,3 +169,4 @@ steps:
 | Deployment Protection Rules | Yes | No | No | **Yes** |
 | Secret Scanning Push Protection | Yes | No | Add-on (GHAS) | **Yes (GHAS)** |
 | SAML SSO / Audit Log Streaming | N/A | No | No | **Yes** |
+

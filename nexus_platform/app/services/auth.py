@@ -34,3 +34,4 @@ def verify_token(token: str) -> Optional[Dict[str, str]]:
     if hmac.compare_digest(expected, signature):
         return {"username": username, "role": role, "timestamp": timestamp}
     return None
+

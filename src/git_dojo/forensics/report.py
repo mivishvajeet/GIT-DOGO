@@ -62,3 +62,4 @@ class ForensicReportRenderer:
         lines.append(f"{cyan}{border}{reset}")
 
         return "\n".join(lines)
+

@@ -19,3 +19,4 @@ def get_user_by_id(db: DatabaseSession, user_id: int) -> Optional[Dict[str, Any]
     if row:
         return dict(row)
     return None
+

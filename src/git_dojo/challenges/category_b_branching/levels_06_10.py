@@ -504,3 +504,4 @@ class Level10InteractiveRebase(BaseChallenge):
             return False, f"Commit messages do not match expected standard.\nFound: {commits}\nExpected: {expected}"
 
         return True, "Successfully cleaned 40 messy commits into 3 pristine atomic commits!"
+

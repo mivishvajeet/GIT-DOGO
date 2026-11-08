@@ -443,3 +443,4 @@ class Level15RecoverForcePush(BaseChallenge):
             return False, "Recovered files mfa.py or oauth.py do not exist in the working directory."
 
         return True, "Successfully recovered from catastrophic force-push using reflog forensics!"
+

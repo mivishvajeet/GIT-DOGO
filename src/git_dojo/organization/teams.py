@@ -106,3 +106,4 @@ TEAMS: List[Team] = [
 ]
 
 TEAMS_BY_ID = {team.id: team for team in TEAMS}
+

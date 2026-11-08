@@ -47,6 +47,7 @@ class DojoCli:
             print(f"  {self.BOLD}Progress         :{self.RESET} {self.GREEN}{completed_count}/{total_levels} ({pct}% Completed){self.RESET}")
             print(f"  {self.BOLD}Playground Path  :{self.RESET} {config.playground_repo}\n")
             print(f"{self.CYAN}{'-' * 75}{self.RESET}")
+            print(f" {self.BOLD}0.{self.RESET}  {self.GREEN}{self.BOLD}🌐 Launch Nexus Cockpit Web Dashboard (http://localhost:8080){self.RESET}")
             print(f" {self.BOLD}1.{self.RESET}  Git Internals Lab (Levels 01 - 05)")
             print(f" {self.BOLD}2.{self.RESET}  Branching & Rebase Surgery Lab (Levels 06 - 15)")
             print(f" {self.BOLD}3.{self.RESET}  Distributed Team Collaboration Lab (Levels 16 - 20)")
@@ -64,9 +65,12 @@ class DojoCli:
             print(f" {self.BOLD}15.{self.RESET} Exit")
             print(f"{self.CYAN}{'-' * 75}{self.RESET}")
 
-            choice = input(f"\n{self.BOLD}Select an option (1-15): {self.RESET}").strip()
+            choice = input(f"\n{self.BOLD}Select an option (0-15): {self.RESET}").strip()
 
-            if choice == "1":
+            if choice in ["0", "w", "web"]:
+                from ..web.server import start_server
+                start_server()
+            elif choice == "1":
                 self.category_menu(ChallengeCategory.A_INTERNALS, "Git Internals Lab")
             elif choice == "2":
                 self.category_menu(ChallengeCategory.B_BRANCHING, "Branching & Rebase Surgery Lab")
@@ -275,3 +279,4 @@ class DojoCli:
         print(f"  4. Nexus Platform Specs      : docs/ARCHITECTURE.md")
         print(f"  5. CI/CD Pipeline Reference  : .github/workflows/ci.yml")
         input(f"\n{self.BOLD}Press Enter to return to menu...{self.RESET}")
+

@@ -117,3 +117,4 @@ class MuseumManager:
             git.tag("v9.9.9-PHANTOM", message="Accidental Tag")
 
         return exhibit
+

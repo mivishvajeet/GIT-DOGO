@@ -85,3 +85,4 @@ def get_stock_level(
         "reserved": row["reserved_quantity"],
         "available": row["quantity"] - row["reserved_quantity"],
     }
+

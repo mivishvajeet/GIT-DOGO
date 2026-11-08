@@ -76,3 +76,4 @@ def create_app():
     """Initializes schema and returns ready state."""
     init_db()
     return {"name": settings.APP_NAME, "version": settings.APP_VERSION}
+

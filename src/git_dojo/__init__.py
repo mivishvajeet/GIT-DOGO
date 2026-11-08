@@ -4,3 +4,4 @@ Advanced Git, GitHub, DevOps, CI/CD, Release Engineering & Production Incident L
 """
 
 __version__ = "1.0.0"
+

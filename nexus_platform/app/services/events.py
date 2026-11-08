@@ -24,3 +24,4 @@ def list_events(db: DatabaseSession, event_type: str = None) -> List[Dict[str, A
         d["payload"] = json.loads(d["payload"])
         results.append(d)
     return results
+

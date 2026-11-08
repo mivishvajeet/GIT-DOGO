@@ -480,3 +480,4 @@ class Level20StalePRRefactor(BaseChallenge):
             return False, "feature/bulk-upload is not rebased directly on top of main."
 
         return True, "Successfully rebased and refactored stale PR to match modern architecture!"
+

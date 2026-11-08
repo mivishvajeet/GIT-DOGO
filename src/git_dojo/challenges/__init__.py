@@ -26,3 +26,4 @@ __all__ = [
     "get_challenge",
     "get_all_challenges",
 ]
+

@@ -19,3 +19,4 @@ def get_warehouse(db: DatabaseSession, warehouse_id: int) -> Optional[Dict[str, 
     cur = db.execute("SELECT * FROM warehouses WHERE id = ?", (warehouse_id,))
     row = cur.fetchone()
     return dict(row) if row else None
+

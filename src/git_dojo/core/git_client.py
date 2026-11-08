@@ -206,3 +206,4 @@ class GitClient:
     def is_git_repo(self) -> bool:
         git_dir = self.repo_path / ".git"
         return git_dir.exists() and (git_dir.is_dir() or git_dir.is_file())
+

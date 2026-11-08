@@ -120,3 +120,4 @@ def init_db(db_path: Path = DB_FILE) -> None:
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+

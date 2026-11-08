@@ -95,3 +95,4 @@ Master semantic versioning release trains, maintenance backports, secret sanitiz
   - Dojo Lab: **Level 30 (THE FINAL BOSS — Complete Repository Disaster)**.
   - Capstone: 20 open PRs, 3 conflicting migrations, 2 bad merges, leaked secret, broken dependency, corrupted tag, lost financial commit.
   - Output: Full repository restoration, 100% passing tests, and published `INCIDENT_REPORT.md`.
+

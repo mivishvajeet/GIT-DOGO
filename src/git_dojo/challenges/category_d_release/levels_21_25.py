@@ -409,3 +409,4 @@ class Level25RollbackFailedRelease(BaseChallenge):
             return False, "Deadlock fix (# DEADLOCK_RESOLVED) missing from orders.py."
 
         return True, "Successfully rolled back faulty release and published clean v1.6.1!"
+

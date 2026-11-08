@@ -457,3 +457,4 @@ class Level05CommitArchaeology(BaseChallenge):
         if "BUGGED_AUTH" in diff:
             return True, f"Correctly identified regression commit {sha[:10]} using commit archaeology!"
         return False, f"Commit {sha} is not the commit that introduced the BUGGED_AUTH regression."
+

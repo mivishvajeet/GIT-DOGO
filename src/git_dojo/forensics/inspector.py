@@ -171,3 +171,4 @@ class ForensicInspector:
             report.health_status = "CRITICAL"
 
         return report
+

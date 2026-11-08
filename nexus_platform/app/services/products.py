@@ -24,3 +24,4 @@ def get_product(db: DatabaseSession, product_id: int) -> Optional[Dict[str, Any]
 def list_products(db: DatabaseSession) -> List[Dict[str, Any]]:
     cur = db.execute("SELECT * FROM products WHERE is_active = 1")
     return [dict(r) for r in cur.fetchall()]
+
