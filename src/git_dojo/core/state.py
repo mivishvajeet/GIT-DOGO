@@ -49,7 +49,6 @@ class DojoState:
                         active_level=data.get("active_level"),
                         active_level_start_time=data.get("active_level_start_time"),
                         levels=data.get("levels", {}),
-                        total_completed=data.get("total_completed", 0),
                     )
             except Exception:
                 pass
