@@ -88,9 +88,9 @@ class Level26CatastrophicMerge(BaseChallenge):
                 return False, f"Critical production patch {i} was destroyed!"
 
         # Check unit tests pass
-        res = git.run("python3", "-m", "unittest", "discover", "-s", "nexus_platform/tests")
-        if not res.success:
-            return False, f"Tests still failing: {res.stderr or res.stdout}"
+        tests_ok, test_out = self.run_platform_tests(repo_path)
+        if not tests_ok:
+            return False, f"Tests still failing: {test_out}"
 
         return True, "Successfully recovered from catastrophic merge while preserving production commits!"
 
@@ -522,9 +522,9 @@ class Level30FinalBoss(BaseChallenge):
             return False, "Tag v2.5.0 does not exist."
 
         # 7. Check unit tests pass
-        res = git.run("python3", "-m", "unittest", "discover", "-s", "nexus_platform/tests")
-        if not res.success:
-            return False, f"Unit test suite still failing: {res.stderr or res.stdout}"
+        tests_ok, test_out = self.run_platform_tests(repo_path)
+        if not tests_ok:
+            return False, f"Unit test suite still failing: {test_out}"
 
         # 8. Check INCIDENT_REPORT.md exists
         report = git.repo_path / "INCIDENT_REPORT.md"

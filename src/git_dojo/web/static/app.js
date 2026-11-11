@@ -12,6 +12,15 @@ let state = {
   escalations: [],
 };
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Initialize on DOM load
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
@@ -119,6 +128,10 @@ async function launchScenario(levelId) {
   try {
     const res = await fetch(`/api/scenarios/${levelId}/launch`, { method: "POST" });
     const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert("Failed to launch scenario: " + (data.error || res.statusText));
+      return;
+    }
     alert(`[✓] ${data.message}\n\nWorking repository: .git_dojo/playground/nexus-platform`);
     fetchScenarios();
     fetchRepoStatus();
@@ -139,23 +152,27 @@ async function verifyActiveScenario() {
   try {
     const res = await fetch(`/api/scenarios/${state.activeScenarioId}/verify`, { method: "POST" });
     const data = await res.json();
+    if (!res.ok) {
+      banner.innerHTML = `<div style="padding:12px; background:#da363333; border:1px solid #da3633; border-radius:6px; color:#f85149;"><strong>✗ VERIFICATION ERROR</strong><br>${escapeHtml(data.error || res.statusText)}</div>`;
+      return;
+    }
 
     if (data.success) {
       banner.innerHTML = `
         <div style="padding:12px; background:#23863633; border:1px solid #238636; border-radius:6px; color:#3fb950;">
-          <strong>✔ VERIFICATION PASSED!</strong><br>${data.message}
+          <strong>✔ VERIFICATION PASSED!</strong><br>${escapeHtml(data.message)}
         </div>
       `;
     } else {
       banner.innerHTML = `
         <div style="padding:12px; background:#da363333; border:1px solid #da3633; border-radius:6px; color:#f85149;">
-          <strong>✗ VERIFICATION FAILED</strong><br>${data.message}
+          <strong>✗ VERIFICATION FAILED</strong><br>${escapeHtml(data.message)}
         </div>
       `;
     }
     fetchScenarios();
   } catch (err) {
-    banner.innerHTML = `<div style="color:red">Verification error: ${err}</div>`;
+    banner.innerHTML = `<div style="color:red">Verification error: ${escapeHtml(err)}</div>`;
   }
 }
 
@@ -166,6 +183,10 @@ async function resetActiveScenario() {
   try {
     const res = await fetch(`/api/scenarios/${state.activeScenarioId}/reset`, { method: "POST" });
     const data = await res.json();
+    if (!res.ok || !data.success) {
+      alert("Reset failed: " + (data.error || res.statusText));
+      return;
+    }
     alert(data.message);
     fetchScenarios();
     fetchRepoStatus();
@@ -252,38 +273,43 @@ function openPrDetail(prId) {
     </div>
   ` : "";
 
+  const isMerged = pr.state === "merged";
+  const stateBadge = isMerged
+    ? '<span class="badge" style="background:#8957e526; color:#a371f7">MERGED</span>'
+    : '<span class="badge" style="background:#1f6feb26; color:var(--accent-blue)">OPEN</span>';
+
   content.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header">
         <div>
-          <h2>${pr.title} <span style="color:var(--text-secondary)">#${pr.id}</span></h2>
+          <h2>${escapeHtml(pr.title)} <span style="color:var(--text-secondary)">#${pr.id}</span></h2>
           <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
-            <span class="badge" style="background:#1f6feb26; color:var(--accent-blue)">OPEN</span>
-            ${pr.author_name} wants to merge ${pr.commits_count} commits into <code>${pr.base_branch}</code> from <code>${pr.branch}</code>
+            ${stateBadge}
+            ${escapeHtml(pr.author_name)} wants to merge ${pr.commits_count} commits into <code>${escapeHtml(pr.base_branch)}</code> from <code>${escapeHtml(pr.branch)}</code>
           </div>
         </div>
       </div>
       <div class="card-body">
         ${conflictAlert}
-        <p style="margin-bottom:16px;">${pr.description}</p>
+        <p style="margin-bottom:16px;">${escapeHtml(pr.description)}</p>
         <h4 style="margin-bottom:8px;">Files Changed (${pr.files_changed.length})</h4>
         <ul style="margin-left:20px; font-family:var(--font-mono); font-size:13px; margin-bottom:20px;">
-          ${pr.files_changed.map(f => `<li>${f}</li>`).join('')}
+          ${pr.files_changed.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
         </ul>
 
         <!-- MERGE ACTION BOX -->
         <div style="background:var(--bg-tertiary); padding:16px; border-radius:6px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
           <div>
             <strong>Merge status:</strong>
-            ${pr.has_conflicts ? '<span style="color:#f85149">Blocked by merge conflicts</span>' : '<span style="color:#3fb950">Ready to merge</span>'}
+            ${isMerged ? '<span style="color:#a371f7">Merged into ' + escapeHtml(pr.base_branch) + '</span>' : (pr.has_conflicts ? '<span style="color:#f85149">Blocked by merge conflicts</span>' : '<span style="color:#3fb950">Ready to merge</span>')}
           </div>
           <div style="display:flex; gap:8px;">
-            <select id="merge-strategy-select" style="background:var(--bg-secondary); color:white; border:1px solid var(--border-color); border-radius:4px; padding:6px;">
+            <select id="merge-strategy-select" ${isMerged ? "disabled" : ""} style="background:var(--bg-secondary); color:white; border:1px solid var(--border-color); border-radius:4px; padding:6px;">
               <option value="merge">Create a merge commit (--no-ff)</option>
               <option value="squash">Squash and merge</option>
               <option value="rebase">Rebase and merge</option>
             </select>
-            <button class="btn btn-primary" onclick="mergeActivePr()">Merge Pull Request</button>
+            <button class="btn btn-primary" ${isMerged ? "disabled" : ""} onclick="mergeActivePr()">${isMerged ? "Merged" : "Merge Pull Request"}</button>
           </div>
         </div>
       </div>
@@ -348,10 +374,12 @@ async function submitReview(action) {
       })
     });
     const data = await res.json();
-    if (data.success) {
+    if (res.ok && data.success) {
       alert(`[✓] Review submitted with action: ${action.toUpperCase()}`);
       openPrDetail(state.activePrId);
       fetchPrs();
+    } else {
+      alert("Failed to submit review: " + (data.error || res.statusText));
     }
   } catch (err) {
     alert("Failed to submit review: " + err);
@@ -448,7 +476,9 @@ async function fetchRepoStatus() {
 
     // Header updates
     document.getElementById("nav-health-score").textContent = `${data.health_score}% (${data.health_status})`;
-    document.getElementById("code-current-branch").textContent = data.current_branch || (data.is_detached ? "DETACHED HEAD" : "main");
+    document.getElementById("code-current-branch").textContent = data.is_valid_repo
+      ? (data.current_branch || (data.is_detached ? "DETACHED HEAD" : "main"))
+      : "No Repo";
 
     // Radar view updates
     document.getElementById("radar-score").textContent = `${data.health_score} / 100`;

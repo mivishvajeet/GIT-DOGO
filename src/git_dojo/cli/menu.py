@@ -102,7 +102,7 @@ class DojoCli:
                 print(f"\n{self.GREEN}Stay sharp, Engineer. Dojo standing by.{self.RESET}\n")
                 sys.exit(0)
             else:
-                print(f"{self.RED}Invalid option. Please enter 1-15.{self.RESET}")
+                print(f"{self.RED}Invalid option. Please enter 0-15.{self.RESET}")
                 time.sleep(1)
 
     def category_menu(self, category: ChallengeCategory, title: str, exclude_boss: bool = False) -> None:

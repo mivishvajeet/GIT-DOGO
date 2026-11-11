@@ -2,8 +2,9 @@
 
 import http.server
 import json
-import urllib.parse
+import os
 import socket
+import urllib.parse
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -11,11 +12,24 @@ from ..challenges import get_all_challenges, get_challenge
 from ..core.config import config
 from ..core.state import state_manager
 from ..core.git_client import GitClient
-from ..core.repo_manager import repo_manager
 from ..forensics.inspector import ForensicInspector
 from .pr_engine import pr_manager
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+WEB_STATE_FILE = config.dojo_home / "web_server.json"
+
+
+class DualStackThreadingHTTPServer(http.server.ThreadingHTTPServer):
+    """ThreadingHTTPServer that accepts both IPv6 (::1) and IPv4 (127.0.0.1)."""
+
+    address_family = socket.AF_INET6
+
+    def server_bind(self) -> None:
+        try:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except (AttributeError, OSError):
+            pass
+        super().server_bind()
 
 
 class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
@@ -29,7 +43,10 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path
 
         if path.startswith("/api/"):
-            self._handle_api_get(path, urllib.parse.parse_qs(parsed.query))
+            try:
+                self._handle_api_get(path, urllib.parse.parse_qs(parsed.query))
+            except Exception as exc:
+                self._send_json({"success": False, "error": str(exc)}, status=500)
             return
 
         # Serve static assets or index.html
@@ -54,22 +71,29 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
                 pass
 
         if path.startswith("/api/"):
-            self._handle_api_post(path, body)
+            try:
+                self._handle_api_post(path, body)
+            except Exception as exc:
+                self._send_json({"success": False, "error": str(exc)}, status=500)
         else:
             self._send_json({"error": "Method not allowed"}, status=405)
 
     def _send_json(self, data: Any, status: int = 200) -> None:
         payload = json.dumps(data, indent=2).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(payload)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _handle_api_get(self, path: str, query: Dict[str, list]) -> None:
         # 1. Scenarios List
         if path == "/api/scenarios":
+            state_manager.reload()
             challenges = []
             for c in get_all_challenges():
                 st = state_manager.levels.get(c.level_id, {})
@@ -153,10 +177,10 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
             if not git.is_git_repo():
                 self._send_json({"commits": []})
                 return
-            log_res = git.run("log", "-n", "25", "--format=%H|%s|%an|%ae|%cr")
+            log_res = git.run("log", "-n", "25", "--format=%H%x1f%s%x1f%an%x1f%ae%x1f%cr")
             commits = []
             for line in log_res.stdout.splitlines():
-                parts = line.split("|")
+                parts = line.split("\x1f")
                 if len(parts) == 5:
                     commits.append({
                         "sha": parts[0],
@@ -178,6 +202,7 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
             if not c:
                 self._send_json({"error": f"Scenario {lid} not found"}, status=404)
                 return
+            state_manager.reload()
             c.setup()
             state_manager.start_level(lid)
             self._send_json({"success": True, "message": f"Scenario {c.title} launched in playground!", "active_level": lid})
@@ -190,6 +215,7 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
             if not c:
                 self._send_json({"error": f"Scenario {lid} not found"}, status=404)
                 return
+            state_manager.reload()
             success, msg = c.verify()
             state_manager.record_attempt(lid, success, msg)
             self._send_json({"success": success, "message": msg, "completed": state_manager.is_completed(lid)})
@@ -202,6 +228,7 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
             if not c:
                 self._send_json({"error": f"Scenario {lid} not found"}, status=404)
                 return
+            state_manager.reload()
             c.reset()
             self._send_json({"success": True, "message": f"Scenario {c.title} reset to initial state."})
             return
@@ -280,33 +307,55 @@ class CockpitApiHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json({"error": "Not Found"}, status=404)
 
 
+def _is_port_available(port: int) -> bool:
+    """Checks whether a TCP port can be bound on loopback."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    if socket.has_ipv6:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s6:
+            try:
+                s6.bind(("::1", port))
+            except OSError:
+                return False
+    return True
+
+
 def find_available_port(start_port: int = 8080) -> int:
     """Finds the first available port starting from start_port."""
     candidates = [start_port, 8081, 8888, 9000, 7777, 8082, 8083]
     for p in candidates:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("127.0.0.1", p))
-                return p
-            except OSError:
-                continue
-    # Fallback to ephemeral port
+        if _is_port_available(p):
+            return p
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
+        s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
+
+
+def _bind_server(target_port: int) -> http.server.ThreadingHTTPServer:
+    """Bind a dual-stack HTTP server when available, falling back to IPv4."""
+    if socket.has_ipv6:
+        try:
+            return DualStackThreadingHTTPServer(("::", target_port), CockpitApiHandler)
+        except OSError:
+            pass
+    return http.server.ThreadingHTTPServer(("0.0.0.0", target_port), CockpitApiHandler)
 
 
 def start_server(port: Optional[int] = None) -> None:
     """Starts the Nexus Ops Cockpit HTTP server with auto-port detection."""
-    target_port = port if port else find_available_port(8080)
-    server_address = ("0.0.0.0", target_port)
-    
+    target_port = port if (port and _is_port_available(port)) else find_available_port(port or 8080)
+
     try:
-        httpd = http.server.ThreadingHTTPServer(server_address, CockpitApiHandler)
+        httpd = _bind_server(target_port)
     except OSError:
         target_port = find_available_port(target_port + 1)
-        server_address = ("0.0.0.0", target_port)
-        httpd = http.server.ThreadingHTTPServer(server_address, CockpitApiHandler)
+        httpd = _bind_server(target_port)
+
+    config.ensure_directories()
+    WEB_STATE_FILE.write_text(json.dumps({"pid": os.getpid(), "port": target_port}), encoding="utf-8")
 
     print(f"\n\033[92m=======================================================================\033[0m")
     print(f"\033[1m\033[96m       NEXUS COCKPIT — ENTERPRISE REPOSITORY DASHBOARD ACTIVE\033[0m")
@@ -320,4 +369,10 @@ def start_server(port: Optional[int] = None) -> None:
         httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nStopping Nexus Cockpit...")
-        httpd.shutdown()
+    finally:
+        httpd.server_close()
+        if WEB_STATE_FILE.exists():
+            try:
+                WEB_STATE_FILE.unlink()
+            except OSError:
+                pass

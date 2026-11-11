@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 
 from nexus_platform.app.database import DatabaseSession, init_db
+from nexus_platform.app.main import NexusApiHandler
 from nexus_platform.app.services import auth, users, products, warehouse, inventory, orders, reporting, events
 from nexus_platform.app.migrations.runner import run_migrations
 
@@ -80,6 +81,12 @@ class TestNexusPlatform(unittest.TestCase):
     def test_migrations(self):
         applied = run_migrations(self.db_path)
         self.assertTrue(len(applied) > 0)
+
+    def test_api_health_handler(self):
+        with DatabaseSession(self.db_path) as db:
+            handler = NexusApiHandler(db)
+            resp = handler.handle("GET", "/health")
+            self.assertEqual(resp["status"], "healthy")
 
 
 if __name__ == "__main__":

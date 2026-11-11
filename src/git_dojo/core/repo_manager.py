@@ -39,19 +39,18 @@ class RepoManager:
         return self.git
 
     def copy_template(self, template_source: Optional[Path] = None) -> None:
-        """Copy files from nexus_platform template into the playground repository."""
+        """Copy nexus_platform template into `<playground>/nexus_platform`."""
         src = template_source or config.nexus_template
         if not src.exists():
             raise FileNotFoundError(f"Template directory does not exist: {src}")
 
-        for item in src.iterdir():
-            if item.name.startswith(".git") and item.is_dir():
-                continue
-            dest = self.repo_path / item.name
-            if item.is_dir():
-                shutil.copytree(item, dest, dirs_exist_ok=True)
-            else:
-                shutil.copy2(item, dest)
+        dest_root = self.repo_path / src.name
+        shutil.copytree(
+            src,
+            dest_root,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.py[cod]"),
+        )
 
 
 repo_manager = RepoManager()

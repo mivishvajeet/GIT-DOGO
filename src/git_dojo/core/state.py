@@ -54,6 +54,13 @@ class DojoState:
                 pass
         return cls()
 
+    def reload(self, file_path: Optional[Path] = None) -> None:
+        """Reload persisted state from disk into this instance."""
+        fresh = self.load(file_path)
+        self.active_level = fresh.active_level
+        self.active_level_start_time = fresh.active_level_start_time
+        self.levels = fresh.levels
+
     def save(self, file_path: Optional[Path] = None) -> None:
         path = file_path or config.state_file
         path.parent.mkdir(parents=True, exist_ok=True)

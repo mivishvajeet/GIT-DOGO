@@ -3,7 +3,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+import os
 from pathlib import Path
+import subprocess
+import sys
 from typing import Dict, List, Optional, Tuple, Any
 
 from ..core.git_client import GitClient
@@ -43,6 +46,22 @@ class BaseChallenge(ABC):
 
     def get_git(self, repo_path: Optional[Path] = None) -> GitClient:
         return GitClient(repo_path or repo_manager.repo_path)
+
+    def run_platform_tests(self, repo_path: Optional[Path] = None) -> Tuple[bool, str]:
+        """Run the Nexus Platform unit test suite inside the playground repo."""
+        git = self.get_git(repo_path)
+        env = os.environ.copy()
+        existing_pypath = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{git.repo_path}{os.pathsep}{existing_pypath}" if existing_pypath else str(git.repo_path)
+        proc = subprocess.run(
+            [sys.executable, "-m", "unittest", "discover", "-s", "nexus_platform/tests"],
+            cwd=str(git.repo_path),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        output = (proc.stderr or proc.stdout).strip()
+        return proc.returncode == 0, output
 
     @abstractmethod
     def setup(self, repo_path: Optional[Path] = None) -> None:

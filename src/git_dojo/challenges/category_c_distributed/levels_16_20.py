@@ -382,9 +382,9 @@ class Level19BreakingChangeMerged(BaseChallenge):
     def verify(self, repo_path: Optional[Path] = None) -> Tuple[bool, str]:
         git = self.get_git(repo_path)
         # Run test suite
-        res = git.run("python3", "-m", "unittest", "discover", "-s", "nexus_platform/tests")
-        if not res.success:
-            return False, f"Unit test suite still failing: {res.stderr or res.stdout}"
+        tests_ok, test_out = self.run_platform_tests(repo_path)
+        if not tests_ok:
+            return False, f"Unit test suite still failing: {test_out}"
         
         # Verify subsequent commits are still present
         log = git.log("-n", "5", "--oneline")
